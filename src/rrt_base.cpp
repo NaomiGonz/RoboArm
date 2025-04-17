@@ -62,21 +62,27 @@ public:
     // Destructor 
     ~GoalBiasedGreedySteerKNeighborhoodRRTStarBase();
 
+    // GIDON
     // Calculates the distance between two configurations (coordinates)
     virtual double distance(const Configuration& c1, const Configuration& c2) = 0;
 
+    // GIDON
     // Steers from c0 towards c, checking for collisions
     virtual Configuration steer(const Configuration& c0, const Configuration& c, double step_size) = 0; // Returns nullopt or empty vector on failure?
 
+    // GIDON
     // Checks if two configurations are close enough
     virtual bool allclose(const Configuration& c1, const Configuration& c2) = 0;
 
+    // GIDON
     // Samples a configuration (with goal bias)
     virtual Configuration sample(double p) = 0;
 
+    // GIDON
     // Checks if a configuration is valid (collision-free)
     virtual bool valid(const Configuration& c) = 0;
 
+    // GIDON
     // Checks if the path between two configurations is collision-free
     virtual bool collision_free(const Configuration& c1, const Configuration& c2, double step_size) = 0;
 
@@ -104,7 +110,8 @@ public:
     
     // Gets the cost of a node (cost from root)
     double Cost(Node* node);
-
+    
+    // GIDON
     // Gets the path from the root to the goal
     std::vector<std::pair<Configuration, Configuration>> get_path_to_goal();
 
@@ -114,9 +121,11 @@ public:
     // Simplifies a given path by trying to connect non-adjacent nodes directly if the connection is collision_free, removing intermediate nodes to shorten the path
     std::vector<std::pair<Configuration, Configuration>> simplify_path(std::vector<std::pair<Configuration, Configuration>> path, double step_size);
 
+    // GIDON
     // Gets all edges in the tree
     std::vector<std::pair<Configuration, Configuration>> get_all_edges();
 
+    // GIDON
     // Calculates the total length of the path returned by get_path_to_goal() using the distance function
     double get_goal_cost();
 
