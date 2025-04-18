@@ -1,8 +1,4 @@
-#include <vector>
-#include <random>
-#include <cmath>
-#include <stdexcept>
-#include "rrt_base.h"
+#include "rrt_base.hpp"
 
 std::vector<std::pair<Configuration, Configuration>> 
 GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_path_to_goal(){
@@ -18,149 +14,69 @@ GoalBiasedGreedySteerKNeighborhoodRRTStarBase::look_for_goal(Node* node) {
         if(allclose(child->coordinates, goal_coordinates)){
             return {{node->coordinates, child->coordinates}};
         }
-    }
 
-    // case: goal not directly under this node, recurse through the subtree
-    std::vector<std::pair<Configuration, Configuration>> subpath = look_for_goal(child);
-    if(!subpath.empty()){
-        subpath.insert(subpath.begin(), {node->coordinates, child->coordinates});
-        return subpath;
+        // case: goal not directly under this node, recurse through the subtree
+        std::vector<std::pair<Configuration, Configuration>> subpath = look_for_goal(child);
+        if(!subpath.empty()){
+            subpath.insert(subpath.begin(), {node->coordinates, child->coordinates});
+            return subpath;
+        }
     }
 
     // case: goal not found in this branch
     return {};
 }
 
+std::vector<std::pair<Configuration, Configuration>> 
+GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_all_edges(){
+    std::vector<std::pair<Configuration, Configuration>> edges;
 
+    // if root is null, return empty edge list
+    if(!root) return edges;
 
-// // Type for coordinates
-// using Configuration = std::vector<double>;
+    // use a queue for traversal and initialize with root node
+    std::vector<Node*> queue = {root};
 
-// /*
-//  * Node class 
-//  *   - Each node represents a single point in RRT tree
-//  *   - Connections between nodes defined by parent/children
-// */
-// class Node {
-// public:
-//     Node* parent; // Pointer to the parent node (nullptr for root)
-//     std::vector<Node*> children; // Pointers to child nodes
-//     Configuration coordinates; // Coordinates of the node
-//     double cost; // Cost to reach this node from the root (like length of path)
+    // loop until all nodes have been visited
+    while(!queue.empty()){
+        //take last node from queue
+        Node* current = queue.back();
+        queue.pop_back(); // remove
 
-//     // Constructor
-//     Node(Node* _parent, Configuration _coordinates, double _cost);
+        // get all children of the current node
+        const std::vector<Node*>& children = current->getChildren();
+        
+        // for each child
+        for(Node* child : children){
+            // add the edge from teh current to child to the edge list
+            edges.push_back({current->coordinates, child->coordinates});
+            //add the child to the queue to visit its children later
+            queue.push_back(child);
+        }
+    }
 
-//     // Destructor 
-//     ~Node();
+    //return list of all edges found in the tree
+    return edges;
+}
 
-//     // Add a child node
-//     void addChildren(Node* _child);
+double GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_goal_cost(){
+    //get current path from root to goal
+    std::vector<std::pair<Configuration, Configuration>> path = get_path_to_goal();
 
-//     // Gets the list of children
-//     const std::vector<Node*>& getChildren() const;
+    //if goal is not reachable, return infinity
+    if(path.empty()){
+        return std::numeric_limits<double>::infinity();
+    }
 
-//     // Remove a specific child 
-//     void removeChildren(const Configuration& _conf);
+    //initialize cost to 0
+    double total_cost = 0.0;
 
-//     // Sets the parent node
-//     void setParent(Node* _parent);
+    for(const auto& edge : path){
+        const Configuration& from = edge.first;
+        const Configuration& to = edge.second;
+        total_cost += distance(from, to); // use distance() from subclass
+    }
 
-//     // Sets the cost
-//     void setCost(double _cost);
-// };
-
-// class GoalBiasedGreedySteerKNeighborhoodRRTStarBase {
-// private:
-//     std::mt19937 random_generator; // C++ random number generator
-//     Node* root; // Pointer to the root node
-//     Configuration goal_coordinates; // Goal configuration
-//     bool goal_found; // Flag to track if goal is reached
-
-//     // Helper function for sorting pairs (e.g., for neighborhood)
-//     static bool compareSecond(const std::pair<Node*, double>& a, const std::pair<Node*, double>& b);
-
-//     // Recursive helper function for finding goal path
-//     std::vector<std::pair<Configuration, Configuration>> look_for_goal(Node* node);
-
-//     // Recursive helper function for getting all edges
-//     void collect_all_edges(Node* node, std::vector<std::pair<Configuration, Configuration>>& edges);
-
-
-// public:
-//     // Constructor with seed
-//     GoalBiasedGreedySteerKNeighborhoodRRTStarBase(int seed);
-
-//     // Destructor 
-//     ~GoalBiasedGreedySteerKNeighborhoodRRTStarBase();
-
-//     // GIDON
-//     // Calculates the distance between two configurations (joint angles)
-//     // assumes Euclidian distance in joint space
-//     virtual double distance(const Configuration& c1, const Configuration& c2) = 0;
-
-//     // GIDON
-//     // Steers from c0 towards c, checking for collisions
-//     virtual Configuration steer(const Configuration& c0, const Configuration& c, double step_size) = 0; // Returns nullopt or empty vector on failure?
-
-//     // GIDON
-//     // Checks if two configurations are close enough
-//     virtual bool allclose(const Configuration& c1, const Configuration& c2) = 0;
-
-//     // GIDON
-//     // Samples a configuration (with goal bias)
-//     virtual Configuration sample(double p) = 0;
-
-//     // GIDON
-//     // Checks if a configuration is valid (collision-free)
-//     virtual bool valid(const Configuration& c) = 0;
-
-//     // GIDON
-//     // Checks if the path between two configurations is collision-free
-//     virtual bool collision_free(const Configuration& c1, const Configuration& c2, double step_size) = 0;
-
-//     // --- RRT* Core Functions ---
-
-//     // Finds the k nearest neighbors to configuration c
-//     std::vector<Node*> neighborhood(const Configuration& c, int k);
-
-//     // Initializes/resets the RRT 
-//     // Creates the root node at the initial configuration (coordinate) c_init and stores the c_goal
-//     void init_rrt(const Configuration& c_init, const Configuration& c_goal);
-
-
-
-//     // Adds a node to the tree using RRT* logic
-//     // 1. Call sample(p) to get a random configuration (new_c), potentially biased towards the goal
-//     // 2. Call neighborhood(new_c, 1) to find the absolute nearest node (x_nearest) already in the tree
-//     // 3. Call steer(...) to try and move from x_nearest towards new_c by step_size, getting new_node_c
-//     // 4. Check collision_free between x_nearest and new_node_c
-//     // 5. (OPTINAL) RRT* Specific - Finding Best Parent: Calls neighborhood(new_node_c, k) to find k nearby nodes. It iterates through these near_ones to find the one (x_min) that can connect to new_node_c collision-free with the lowest total cost from the root (minimize path length)
-//     // 6. Adds the new_node to the tree as a child of x_min
-//     // 7. (OPTINAL) RRT* Specfic -  Iterates through the near_ones again. If connecting new_node to a near node results in a shorter path for that near node than its current path, it rewires the tree: disconnects near from its old parent and connects it as a child of new_node
-//     Configuration add_node(double p, int k, double step_size);
-
-    
-//     // Gets the cost of a node (cost from root)
-//     double Cost(Node* node);
-    
-//     // GIDON
-//     // Gets the path from the root to the goal
-//     std::vector<std::pair<Configuration, Configuration>> get_path_to_goal();
-
-//     // Checks if the goal is currently reachable
-//     bool is_goal_reachable();
-
-//     // Simplifies a given path by trying to connect non-adjacent nodes directly if the connection is collision_free, removing intermediate nodes to shorten the path
-//     std::vector<std::pair<Configuration, Configuration>> simplify_path(std::vector<std::pair<Configuration, Configuration>> path, double step_size);
-
-//     // GIDON
-//     // Gets all edges in the tree
-//     std::vector<std::pair<Configuration, Configuration>> get_all_edges();
-
-//     // GIDON
-//     // Calculates the total length of the path returned by get_path_to_goal() using the distance function
-//     double get_goal_cost();
-
-// };
-
+    //return cost of the path
+    return total_cost;
+}
