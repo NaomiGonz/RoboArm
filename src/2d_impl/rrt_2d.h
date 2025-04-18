@@ -1,7 +1,7 @@
 #ifndef RRT_STAR_2D_H
 #define RRT_STAR_2D_H
 
-#include "rrt_base.h" 
+#include "rrt_base.hpp" 
 #include <vector>
 #include <cmath> 
 
