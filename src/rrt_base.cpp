@@ -24,15 +24,23 @@ const std::vector<Node*>& Node::getChildren() const {
     return children;
 }
 
-void Node::removeChildren(const Configuration& _conf,
-                         const std::function<bool(const Configuration&, const Configuration&)>& allclose_func)
+bool Node::allClose(const Configuration& a, const Configuration& b, double rtol, double atol)
 {
-    // Use std::remove_if and erase idiom
+    if (a.size() != b.size()) return false;
+
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        if (std::fabs(a[i] - b[i]) > (atol + rtol * std::fabs(b[i])))
+            return false;
+    }
+    return true;
+}
+
+void Node::removeChildren(const Configuration& _conf)
+{
     children.erase(
-        std::remove_if(children.begin(), children.end(),
-                       [&](Node* child) {
-                           return allclose_func(child->coordinates, _conf);
-                       }),
+        std::remove_if(children.begin(), children.end(),[&](Node* child) {
+            return allClose(child->coordinates, _conf);
+        }),
         children.end());
 }
 
@@ -269,23 +277,17 @@ Configuration GoalBiasedGreedySteerKNeighborhoodRRTStarBase::add_node(double p, 
         double cost_via_new = Cost(new_node) + distance(new_node_c, near_node->coordinates);
 
         // Check if shorter path using new_node and collsion free 
-        if (cost_via_new < Cost(near_node) && collision_free(new_node_c, near_node->coordinates, step_size))
-        {
-            Node* old_parent = near_node->parent;
-            if (old_parent) {
-                // Remove 'near_node' from its old parent's children list
-                old_parent->removeChildren(near_node->coordinates,
-                    [this](const Configuration& c1, const Configuration& c2) {
-                        return this->allclose(c1, c2);
-                    });
-            }
+        if (cost_via_new < Cost(near_node) && collision_free(new_node_c, near_node->coordinates, step_size)) {
 
-            // Update parent and cost
-            near_node->setParent(new_node);
-            near_node->setCost(cost_via_new);
+        Node* old_parent = near_node->parent;
+        if (old_parent) {
+            // Detach near_node from its previous parent
+            old_parent->removeChildren(near_node->coordinates);
+        }
 
-            // Add 'near_node' as a child of the 'new_node'
-            new_node->addChildren(near_node);
+        near_node->setParent(new_node);
+        near_node->setCost(cost_via_new);
+        new_node->addChildren(near_node);
         }
     }
 

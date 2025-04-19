@@ -14,6 +14,9 @@ using Configuration = std::vector<double>;
  *   - Connections between nodes defined by parent/children
 */
 class Node {
+private:
+    static bool allClose(const Configuration& a, const Configuration& b, double rtol = 1e-5, double atol = 1e-8);
+
 public:
     Node* parent; // Pointer to the parent node (nullptr for root)
     std::vector<Node*> children; // Pointers to child nodes
@@ -22,9 +25,6 @@ public:
 
     // Constructor
     Node(Node* _parent, Configuration _coordinates, double _cost);
-
-    // Destructor 
-    ~Node();
 
     // Add a child node
     void addChildren(Node* _child);
@@ -43,7 +43,7 @@ public:
 };
 
 class GoalBiasedGreedySteerKNeighborhoodRRTStarBase {
-private:
+protected:
     std::mt19937 random_generator; // C++ random number generator
     Node* root; // Pointer to the root node
     Configuration goal_coordinates; // Goal configuration
