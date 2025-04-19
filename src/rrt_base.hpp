@@ -1,3 +1,5 @@
+#ifndef RRT_BASE_HPP
+#define RRT_BASE_HPP
 #include <vector>
 #include <random>
 #include <cmath>
@@ -125,3 +127,4 @@ public:
 
 };
 
+#endif //RRT_BASE_HPP
