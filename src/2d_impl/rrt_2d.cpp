@@ -9,7 +9,6 @@
 #include <sys/stat.h> 
 #include <filesystem> 
 
-
 // --- Constructor ---
 RRTStar2D::RRTStar2D(int seed, const std::vector<CircleObstacle>& _obstacles, double _xy_min, double _xy_max)
     : GoalBiasedGreedySteerKNeighborhoodRRTStarBase(seed), 
@@ -90,7 +89,7 @@ Configuration RRTStar2D::sample(double p) {
     // Sample a random point 
     std::uniform_real_distribution<double> coordinate_dist(xy_min, xy_max);
     double rand_x = coordinate_dist(random_generator);
-    double rand_x = coordinate_dist(random_generator);
+    double rand_y = coordinate_dist(random_generator);
 
     return {rand_x, rand_y};
 }
