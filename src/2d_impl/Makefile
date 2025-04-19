@@ -3,7 +3,7 @@
 
 CXX       := g++
 CXX_ARM   := arm-linux-g++
-CXXFLAGS  := -I..
+CXXFLAGS  := -I.. -std=c++17
 
 # -----------------------------------------------------
 # Native build (default)
