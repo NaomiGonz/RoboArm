@@ -7,7 +7,6 @@
 #include <limits>
 #include <iomanip> 
 #include <sys/stat.h> 
-#include <filesystem> 
 
 // --- Constructor ---
 RRTStar2D::RRTStar2D(int seed, const std::vector<CircleObstacle>& _obstacles, double _xy_min, double _xy_max)
@@ -69,7 +68,7 @@ Configuration RRTStar2D::steer(const Configuration& c0, const Configuration& c, 
 
     // Return closet point to target c or nothing if not able to make any steps
     if (made_step) return curr_point;
-    else return {};
+    else return Configuration();
 }
 
 
@@ -121,7 +120,7 @@ bool RRTStar2D::intersect(double Ax, double Ay, double Bx, double By, const Circ
 
     double A = (Bx * Bx) + (By * By);
     double B = (Bx * Px) + (By * Py);
-    double C = (Px * Px) + (Py * Py) - ((obs.radius + 0.05) * (obs.radius + 0.05);
+    double C = (Px * Px) + (Py * Py) - ((obs.radius + 0.05) * (obs.radius + 0.05));
 
     // Check if A is close to zero
     if (std::fabs(A) < std::numeric_limits<double>::epsilon()){
@@ -173,6 +172,8 @@ bool RRTStar2D::collision_free(const Configuration& c1, const Configuration& c2,
 // --- Main Application Logic ---
 
 int main() {
+    std::cout << "reached main" << std::endl;
+    
     // --- Configuration ---
     const Configuration c_init = {0.0, 0.0};
     const Configuration c_goal = {0.0, -1.5};
@@ -184,10 +185,12 @@ int main() {
     const double XY_MIN = -2.0;
     const double XY_MAX = 2.0;
 
-    const std::vector<CircleObstacle> obstacles = {
-        {-1.0, 0.5, 0.5}, {1.0, 1.0, 0.5}, {-0.8, -0.8, 1.0},
-        {1.0, 0.0, 0.6}, {1.0, -1.0, 1.0}
-    };
+    std::vector<CircleObstacle> obstacles;
+    obstacles.emplace_back(CircleObstacle{-1.0, 0.5, 0.5});
+    obstacles.emplace_back(CircleObstacle{1.0, 1.0, 0.5});
+    obstacles.emplace_back(CircleObstacle{-0.8, -0.8, 1.0});
+    obstacles.emplace_back(CircleObstacle{1.0, 0.0, 0.6});
+    obstacles.emplace_back(CircleObstacle{1.0, -1.0, 1.0});
 
     // --- RRT Initialization ---
     RRTStar2D rrt(SEED, obstacles, XY_MIN, XY_MAX);
@@ -218,14 +221,10 @@ int main() {
     std::string filename;
 
     // Create results directory if it doesn't exist
-    try {
-         if (!std::filesystem::exists(output_dir)) {
-            std::filesystem::create_directory(output_dir);
-            std::cout << "Created directory: " << output_dir << std::endl;
-         }
-    } catch (const std::filesystem::filesystem_error& e) {
-        std::cerr << "Error creating directory " << output_dir << ": " << e.what() << std::endl;
-        return 1; 
+    struct stat st = {0};
+    if (stat(output_dir.c_str(), &st) == -1) {
+        mkdir(output_dir.c_str(), 0700);
+        std::cout << "Created directory: " << output_dir << std::endl;
     }
 
 
