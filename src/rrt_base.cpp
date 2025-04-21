@@ -94,7 +94,7 @@ bool GoalBiasedGreedySteerKNeighborhoodRRTStarBase::compareSecond(
 // Finds the k nearest neighbors to configuration c using BFS
 std::vector<Node*> GoalBiasedGreedySteerKNeighborhoodRRTStarBase::neighborhood(const Configuration& c, int k) {
     if (!root) {
-        return {}; // Return empty vector if tree is empty
+        return std::vector<Node*>(); // Return empty vector if tree is empty
     }
 
     // Use a vector of pairs to store (Node*, distance)
@@ -210,7 +210,7 @@ Configuration GoalBiasedGreedySteerKNeighborhoodRRTStarBase::add_node(double p, 
         std::vector<Node*> nearest_nodes = neighborhood(new_c, 1);
         if (nearest_nodes.empty()) {
             // Tree empty, cant add node
-             return {}; 
+             return Configuration(); 
         }
         x_nearest = nearest_nodes[0]; 
 
@@ -229,7 +229,7 @@ Configuration GoalBiasedGreedySteerKNeighborhoodRRTStarBase::add_node(double p, 
 
     // Check if we successfully found a node 
     if (!steer_success || x_nearest == nullptr) {
-        return {}; 
+        return Configuration(); 
     }
 
     // --- RRT* Specific Logic  ---
@@ -260,7 +260,7 @@ Configuration GoalBiasedGreedySteerKNeighborhoodRRTStarBase::add_node(double p, 
 
     // If a valid parent not found return empyt vector
     if (x_min == nullptr) {
-        return {}; 
+        return Configuration(); 
     }
 
     // Add the new node to the tree
@@ -357,19 +357,21 @@ GoalBiasedGreedySteerKNeighborhoodRRTStarBase::look_for_goal(Node* node) {
     // case: goal is found directly under this node
     for(Node* child : children){
         if(allclose(child->coordinates, goal_coordinates)){
-            return {{node->coordinates, child->coordinates}};
+            std::vector<std::pair<Configuration, Configuration>> result;
+            result.emplace_back(node->coordinates, child->coordinates);
+            return result;
         }
 
         // case: goal not directly under this node, recurse through the subtree
         std::vector<std::pair<Configuration, Configuration>> subpath = look_for_goal(child);
         if(!subpath.empty()){
-            subpath.insert(subpath.begin(), {node->coordinates, child->coordinates});
+            subpath.insert(subpath.begin(), std::make_pair(node->coordinates, child->coordinates));
             return subpath;
         }
     }
 
     // case: goal not found in this branch
-    return {};
+    return std::vector<std::pair<Configuration, Configuration>>();
 }
 
 std::vector<std::pair<Configuration, Configuration>> 
@@ -380,7 +382,8 @@ GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_all_edges(){
     if(!root) return edges;
 
     // use a queue for traversal and initialize with root node
-    std::vector<Node*> queue = {root};
+    std::vector<Node*> queue;
+    queue.push_back(root);
 
     // loop until all nodes have been visited
     while(!queue.empty()){
@@ -394,7 +397,7 @@ GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_all_edges(){
         // for each child
         for(Node* child : children){
             // add the edge from teh current to child to the edge list
-            edges.push_back({current->coordinates, child->coordinates});
+            edges.emplace_back(current->coordinates, child->coordinates);
             //add the child to the queue to visit its children later
             queue.push_back(child);
         }
