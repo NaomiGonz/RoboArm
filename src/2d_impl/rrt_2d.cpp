@@ -121,7 +121,7 @@ bool RRTStar2D::intersect(double Ax, double Ay, double Bx, double By, const Circ
 
     double A = (Bx * Bx) + (By * By);
     double B = (Bx * Px) + (By * Py);
-    double C = (Px * Px) + (Py * Py) - (obs.radius * obs.radius);
+    double C = (Px * Px) + (Py * Py) - ((obs.radius + 0.05) * (obs.radius + 0.05);
 
     // Check if A is close to zero
     if (std::fabs(A) < std::numeric_limits<double>::epsilon()){

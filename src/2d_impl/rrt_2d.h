@@ -14,7 +14,7 @@ class RRTStar2D : public GoalBiasedGreedySteerKNeighborhoodRRTStarBase {
 private:
     std::vector<CircleObstacle> obstacles;
     double xy_min, xy_max;
-    int dof; // Degrees of freedom 
+    int dof; 
 
     bool intersect(double Ax, double Ay, double Bx, double By, const CircleObstacle& obs);
 
