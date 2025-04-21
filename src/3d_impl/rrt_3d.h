@@ -17,8 +17,9 @@ struct SphereObstacle {
 class RRTStar3D : public GoalBiasedGreedySteerKNeighborhoodRRTStarBase {
 private:
     std::vector<SphereObstacle> obstacles;  
-    double xy_min, xy_max, min_rad, max_rad;
-    int dof;                              
+    double xyz_min, xyz_max;
+    int dof;
+    std::vector<std::pair<double, double>> rad_limits;                           
 
     // Takes a joint configuration and returns all joint points in Cartesian space? or just final point?
     std::vector<Configuration> forward_kinematics(const Configuration& joint_angles);
@@ -38,23 +39,29 @@ public:
 
     // --- Implementations of Virtual Functions from Base Class ---
 
+    // Gidon
     // Calculates distance between two joint configurations (6D vectors)
     double distance(const Configuration& c1, const Configuration& c2) override;
 
+    // Naomi
     // Steers from joint config c0 towards c by a joint-space step_size
     // checks collision free using FK at each step taken
     Configuration steer(const Configuration& c0, const Configuration& c, double step_size) override;
 
+    // Gidon 
     // use joint-space distance and check closeness
     bool allclose(const Configuration& c1, const Configuration& c2) override;
 
 
+    // Gidon 
     // Sample random 6-DOF joint configuration within limits
     Configuration sample(double p) override;
 
+    // Naomi
     // Check if valid configuration or if it hit obstacles 
     bool valid(const Configuration& c) override;
 
+    // Naomi
     // check if path in joint space is collision free
     bool collision_free(const Configuration& c1, const Configuration& c2, double step_size) override;
 };
