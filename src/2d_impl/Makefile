@@ -3,7 +3,7 @@
 
 CXX       := g++
 CXX_ARM   := arm-linux-gnueabihf-g++
-CXXFLAGS  := -I.. -std=c++14 -static -O2
+CXXFLAGS  := -I.. -std=c++14 -O2
 
 # -----------------------------------------------------
 # Native build (default)
@@ -21,13 +21,13 @@ rrt_base.o: ../rrt_base.cpp ../rrt_base.hpp
 # ARM cross‑compile build
 # -----------------------------------------------------
 rrt_2d_ARM: rrt_2d_ARM.o rrt_base_ARM.o
-	$(CXX_ARM) $(CXXFLAGS) -o rrt_2d_ARM rrt_2d_ARM.o rrt_base_ARM.o
+	$(CXX_ARM) $(CXXFLAGS) -static -o rrt_2d_ARM rrt_2d_ARM.o rrt_base_ARM.o
 
 rrt_2d_ARM.o: rrt_2d.cpp rrt_2d.h ../rrt_base.hpp
-	$(CXX_ARM) $(CXXFLAGS) -c rrt_2d.cpp -o rrt_2d_ARM.o
+	$(CXX_ARM) $(CXXFLAGS) -static -c rrt_2d.cpp -o rrt_2d_ARM.o
 
 rrt_base_ARM.o: ../rrt_base.cpp ../rrt_base.hpp
-	$(CXX_ARM) $(CXXFLAGS) -c ../rrt_base.cpp -o rrt_base_ARM.o
+	$(CXX_ARM) $(CXXFLAGS) -static -c ../rrt_base.cpp -o rrt_base_ARM.o
 
 # -----------------------------------------------------
 # Clean up everything
