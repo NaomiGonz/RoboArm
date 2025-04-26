@@ -378,6 +378,7 @@ int main() {
     //const double XYZ_MAX = 2.0;
 
     std::vector<SphereObstacle> obstacles;
+    obstacles.emplace_back(SphereObstacle{0.073214 , 0.0906615, 0.2217195, 0.05038023});
 
     // Joint angle restrictions in radians
     std::vector<std::pair<double, double>> joint_limits = { {-2.8973, 2.8973}, {-1.7628, 1.7628}, {-2.8973, 2.8973}, {-3.0718, -0.0698}, {-2.8973, 2.8973} };
