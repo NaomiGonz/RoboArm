@@ -306,4 +306,51 @@ bool RRTStar3D::segment_sphere_intersect(const Configuration& p1, const Configur
     return false;
 }
 
+std::vector<Configuration> RRTStar3D::forward_kinematics(const Configuration& joint_angles) {
+    if (joint_angles.size() != dof) {
+        throw std::runtime_error("Forward Kinematics Error: Incorrect number of joint angles provided (" + std::to_string(joint_angles.size()) + ", expected " + std::to_string(dof) + ").");
+    }
+
+    // Prepare inputs for the specific FK function call 
+    double qcos[NU]; 
+    double qsin[NU];
+    double v[NU] = {0.0}; // zero velocity cuz static 
+    double a[NU] = {0.0}; // zero acceleration cuz static 
+
+    // Compute sin + cos
+    for(int i = 0; i < dof; ++i) { 
+        qcos[i] = std::cos(joint_angles[i]);
+        qsin[i] = std::sin(joint_angles[i]);
+    }
+
+    // Call the specific FK function 
+    auto fk_result = ForwardKinematics(
+        qcos[0], qcos[1], qcos[2], qcos[3], qcos[4], qcos[5],
+        qsin[0], qsin[1], qsin[2], qsin[3], qsin[4], qsin[5],
+        v[0], v[1], v[2], v[3], v[4], v[5],
+        a[0], a[1], a[2], a[3], a[4], a[5]
+    );
+
+    // initialize varibles to hold results
+    std::vector<Configuration> robot_points;
+    int num_fk_frames = fk_result.SE3.size(); 
+    int points_to_extract = std::min(num_fk_frames, dof); 
+    robot_points.reserve(points_to_extract); 
+
+    // Extract cartesian points {x, y, z} from the result
+    for (int i = 0; i < points_to_extract; ++i) {
+         robot_points.push_back({fk_result.SE3[i].translation[0],
+                                 fk_result.SE3[i].translation[1],
+                                 fk_result.SE3[i].translation[2]});
+    }
+
+    // Check to see if points were found
+    if (robot_points.empty() && points_to_extract > 0) {
+         std::cout << "WARNING: FK result yielded no points, though did have SE3\n";
+    }
+
+    // Return results
+    return robot_points;
+}
+
 
