@@ -143,8 +143,27 @@ bool RRTStar3D::allclose(const Configuration& c1, const Configuration& c2){
     return true;
 }
 
-bool RRTStar3D::valid(const Configuration& c){
-	return 0;
+bool RRTStar3D::valid(const Configuration& c) {
+    // Check size of vector
+    if (c.size() != dof) return false;
+
+    // Check Joint Limits
+    for (int i = 0; i < dof; ++i) {
+        if (c[i] < rad_limits[i].first || c[i] > rad_limits[i].second) {
+            return false;
+        }
+    }
+
+    // Do FK to change to cartiesain and check if collsion found
+    std::vector<Configuration> robot_points = forward_kinematics(c);
+    if (robot_points.empty()) {
+        std::cout << "ERROR: Forward Kinematics failed or returned no points. valid()\n";
+        return false;
+    }
+    bool collision_detected = check_robot_collision(robot_points);
+
+    // Return true if no collision was detected
+    return !collision_detected;
 }
 
 bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2, double step_size){
