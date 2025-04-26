@@ -171,6 +171,10 @@ bool RRTStar3D::valid(const Configuration& c) {
     }
     bool collision_detected = check_robot_collision(robot_points);
 
+    for(const Configuration& p : robot_points){
+        if(p.size() >= 3 && p[2] < 0.0) return false;
+    }
+
     // Return true if no collision was detected
     return !collision_detected;
 }
