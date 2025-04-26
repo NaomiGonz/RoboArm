@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sys/stat.h> 
 #include <fstream>
+#include <iomanip>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -414,7 +415,7 @@ int main() {
     // Create results directory if it doesn't exist
     struct stat st = {0};
     if (stat(output_dir.c_str(), &st) == -1) {
-        mkdir(output_dir.c_str(), 0700);
+        mkdir(output_dir.c_str());
         std::cout << "Created directory: " << output_dir << std::endl;
     }
 
