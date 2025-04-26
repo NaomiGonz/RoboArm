@@ -7,18 +7,19 @@
 #include <limits>    
 #include <iostream>
 #include <algorithm>
-
-#define NU 6
+#include <sys/stat.h> 
+#include <fstream>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-RRTStar3D::RRTStar3D(int seed, const std::vector<SphereObstacle>& _obstacles, const std::vector<std::pair<double, double>> _rad_limits)
+// --- Constructor ---
+RRTStar3D::RRTStar3D(int seed, const std::vector<SphereObstacle>& _obstacles, const std::vector<std::pair<double, double>>& _rad_limits)
     : GoalBiasedGreedySteerKNeighborhoodRRTStarBase(seed), 
       obstacles(_obstacles),          
       rad_limits(_rad_limits),     
-      dof(6)                         
+      dof(5)                         
 {
     // Error check correct number of joint limits
     if (rad_limits.size() != dof) {
@@ -27,6 +28,9 @@ RRTStar3D::RRTStar3D(int seed, const std::vector<SphereObstacle>& _obstacles, co
                                     std::to_string(rad_limits.size()) + ".");
     }
 }
+
+
+// --- RRT 3D Class Functions ---
 
 Configuration RRTStar3D::sample(double p /* p = goal bias probability */){
 	const int max_tries = 25; // avoid infiinte loops
@@ -329,16 +333,16 @@ std::vector<Configuration> RRTStar3D::forward_kinematics(const Configuration& jo
 
     // Call the specific FK function 
     auto fk_result = ForwardKinematics(
-        qcos[0], qcos[1], qcos[2], qcos[3], qcos[4], qcos[5],
-        qsin[0], qsin[1], qsin[2], qsin[3], qsin[4], qsin[5],
-        v[0], v[1], v[2], v[3], v[4], v[5],
-        a[0], a[1], a[2], a[3], a[4], a[5]
+        qcos[0], qcos[1], qcos[2], qcos[3], qcos[4], 
+        qsin[0], qsin[1], qsin[2], qsin[3], qsin[4], 
+        v[0], v[1], v[2], v[3], v[4],
+        a[0], a[1], a[2], a[3], a[4]
     );
 
     // initialize varibles to hold results
     std::vector<Configuration> robot_points;
-    int num_fk_frames = fk_result.SE3.size(); 
-    int points_to_extract = std::min(num_fk_frames, dof); 
+    //int num_fk_frames = fk_result.SE3.size(); 
+    int points_to_extract = dof; //std::min(num_fk_frames, dof); 
     robot_points.reserve(points_to_extract); 
 
     // Extract cartesian points {x, y, z} from the result
@@ -356,5 +360,156 @@ std::vector<Configuration> RRTStar3D::forward_kinematics(const Configuration& jo
     // Return results
     return robot_points;
 }
+
+
+// --- Main Application Logic ---
+int main() {
+    std::cout << "reached main" << std::endl;
+
+    // --- Configuration ---
+    const Configuration c_init = {0.0, 0.0, 0.0, -1.0, 0.0};
+    const Configuration c_goal = {1.0, 1.0, 2.0, -1.0, 2};
+    const double p = 0.5; // Goal bias probability
+    const int k = 20;      // Number of neighbors for RRT*
+    const double step_size = 0.1;
+    const int NUM_NODES = 1000; // Number of iterations/nodes to add
+    const int SEED = 42;
+    //const double XYZ_MIN = -2.0;
+    //const double XYZ_MAX = 2.0;
+
+    std::vector<SphereObstacle> obstacles;
+
+    // Joint angle restrictions in radians
+    std::vector<std::pair<double, double>> joint_limits = { {-2.8973, 2.8973}, {-1.7628, 1.7628}, {-2.8973, 2.8973}, {-3.0718, -0.0698}, {-2.8973, 2.8973} };
+
+    // --- RRT Initialization ---
+    RRTStar3D rrt(SEED, obstacles, joint_limits);
+    rrt.init_rrt(c_init, c_goal);
+
+    // --- RRT Execution ---
+    std::cout << "Running RRT* for " << NUM_NODES << " iterations..." << std::endl;
+    for (int i = 0; i < NUM_NODES; ++i) {
+        rrt.add_node(p, k, step_size);
+        if ((i + 1) % 100 == 0) {
+            std::cout << "Iteration: " << (i + 1) << "/" << NUM_NODES << std::endl;
+        }
+    }
+    std::cout << "RRT* calculation finished." << std::endl;
+
+    // --- Data Collection ---
+    std::cout << "Collecting data for output..." << std::endl;
+    auto all_edges = rrt.get_all_edges();
+    auto goal_path = rrt.get_path_to_goal(); 
+    std::vector<std::pair<Configuration, Configuration>> simplified_path;
+    if (!goal_path.empty()) {
+        simplified_path = rrt.simplify_path(goal_path, step_size);
+    }
+    double final_goal_cost = rrt.get_goal_cost(); // Returns infinity if no path
+
+    // --- Output File Creation ---
+    std::string output_dir = "results";
+    std::string filename;
+
+    // Create results directory if it doesn't exist
+    struct stat st = {0};
+    if (stat(output_dir.c_str(), &st) == -1) {
+        mkdir(output_dir.c_str(), 0700);
+        std::cout << "Created directory: " << output_dir << std::endl;
+    }
+
+
+    std::cout << "Enter the output filename (e.g., rrt_output.csv): ";
+    std::cin >> filename;
+    std::string full_path = output_dir + "/" + filename;
+
+    std::ofstream outfile(full_path);
+    if (!outfile.is_open()) {
+        std::cerr << "Error: Could not open file " << full_path << " for writing." << std::endl;
+        return 1;
+    }
+    std::cout << "Writing data to " << full_path << std::endl;
+
+    // Set precision for floating point numbers in the output file
+    outfile << std::fixed << std::setprecision(6);
+
+    // --- Write Data to CSV ---
+
+    // Parameters
+    outfile << "# Section: Parameters" << std::endl;
+    outfile << "Param,Value" << std::endl;
+    outfile << "p," << p << std::endl;
+    outfile << "k," << k << std::endl;
+    outfile << "step_size," << step_size << std::endl;
+    outfile << "num_nodes," << NUM_NODES << std::endl;
+    outfile << "goal_cost,";
+    if (std::isinf(final_goal_cost)) {
+         outfile << "inf" << std::endl;
+    } else {
+         outfile << final_goal_cost << std::endl;
+    }
+    
+    // Joint Limits
+    outfile << "# Section: Joint_Limits\njoint,q_min,q_max\n";
+    for (std::size_t j = 0; j < joint_limits.size(); ++j) {
+        outfile << (j + 1)             << ','   
+            << joint_limits[j].first  << ','
+            << joint_limits[j].second << '\n';
+    }
+    outfile << std::endl;
+
+    // Start
+    outfile << "# Section: Start\nq1,q2,q3,q4,q5\n";
+    for (double q : c_init) outfile << q << (q==c_init.back()?'\n':',');
+
+    // Goal
+    for (double q : c_goal) outfile << q << (q==c_goal.back()?'\n':',');
+    outfile << std::endl;
+
+    // Obstacles
+    outfile << "# Section: Obstacles\ncenter_x,center_y,center_z,radius\n";
+    for (auto const& o : obstacles)
+        outfile << o.x << ',' << o.y << ',' << o.z << ',' << o.radius << '\n';
+    outfile << std::endl;
+
+    // All Edges
+    outfile << "# Section: All_Edges\n"
+           "q1_src,q2_src,q3_src,q4_src,q5_src,"
+           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
+    for (auto const& e : all_edges) {
+        for (double q : e.first)  outfile << q << ',';
+        for (size_t i = 0; i < e.second.size(); ++i)
+            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
+    }
+    outfile << std::endl;
+
+    // Goal Path
+    outfile << "# Section: Goal_Path\n"
+           "q1_src,q2_src,q3_src,q4_src,q5_src,"
+           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
+    for (auto const& e : goal_path) {
+        for (double q : e.first)  outfile << q << ',';
+        for (size_t i = 0; i < e.second.size(); ++i)
+            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
+    }
+    outfile << std::endl;
+
+    // Simplified Path
+    outfile << "# Section: Simplified_Path\n"
+           "q1_src,q2_src,q3_src,q4_src,q5_src,"
+           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
+    for (auto const& e : simplified_path) {
+        for (double q : e.first)  outfile << q << ',';
+        for (size_t i = 0; i < e.second.size(); ++i)
+            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
+    }
+    outfile << std::endl;
+
+
+    outfile.close();
+    std::cout << "Data successfully written." << std::endl;
+
+    return 0;
+}
+
 
 

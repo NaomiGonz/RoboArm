@@ -34,7 +34,7 @@ public:
 
     RRTStar3D(int seed,
               const std::vector<SphereObstacle>& _obstacles,
-              const std::vector<JointLimit>& _joint_limits
+              const std::vector<std::pair<double, double>>& _rad_limits
              );
 
     // --- Implementations of Virtual Functions from Base Class ---
