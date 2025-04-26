@@ -113,6 +113,9 @@ public:
     // Gets the path from the root to the goal
     std::vector<std::pair<Configuration, Configuration>> get_path_to_goal();
 
+    // Gets the points from the root to the goal
+    std::vector<Configuration> get_points_to_goal();
+
     // Checks if the goal is currently reachable
     bool is_goal_reachable();
 

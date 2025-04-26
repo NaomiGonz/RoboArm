@@ -449,6 +449,7 @@ int main() {
     } else {
          outfile << final_goal_cost << std::endl;
     }
+    outfile << std::endl;
     
     // Joint Limits
     outfile << "# Section: Joint_Limits\njoint,q_min,q_max\n";
