@@ -1,10 +1,14 @@
 #include "rrt_3d.h" 
+#include "forward_kinematics_roarm_double.h"
 #include <vector>
 #include <cmath>
 #include <random>   
 #include <stdexcept> 
 #include <limits>    
 #include <iostream>
+#include <algorithm>
+
+#define NU 6
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
