@@ -252,5 +252,58 @@ bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_ca
     return false;
 }
 
+bool RRTStar3D::segment_sphere_intersect(const Configuration& p1, const Configuration& p2, const SphereObstacle& obs) {
+    // Check Dimensions
+    if (p1.size() != 3 || p2.size() != 3) {
+        std::cout << "Segment-Sphere Intersect ERROR: Points must be 3D\n";
+        return false; 
+    }
+
+    // Vector from sphere center to segment start (W = p1 - C)
+    double Wx = p1[0] - obs.x;
+    double Wy = p1[1] - obs.y;
+    double Wz = p1[2] - obs.z;
+
+    // Vector representing the segment (V = p2 - p1)
+    double Vx = p2[0] - p1[0];
+    double Vy = p2[1] - p1[1];
+    double Vz = p2[2] - p1[2];
+
+    // Calculate coefficients for At^2 + Bt + C = 0
+    // || p1 + t*V - C ||^2 = r^2  -> || W + t*V ||^2 = r^2
+    // -> (V.V)t^2 + 2(V.W)t + (W.W - r^2) = 0
+    double A = (Vx * Vx) + (Vy * Vy) + (Vz * Vz); // A = V.V 
+    double B = 2.0 * ((Vx * Wx) + (Vy * Wy) + (Vz * Wz)); // B = 2 * (V.W)
+    double C = (Wx * Wx) + (Wy * Wy) + (Wz * Wz) - (obs.radius * obs.radius); // C = W.W - r^2
+
+    // Check if A is close to zero
+    if (std::fabs(A) < std::numeric_limits<double>::epsilon()) {
+        return C <= 0;
+    }
+
+    // Calculate Delta = B^2 - 4AC
+    double delta = B * B - 4.0 * A * C;
+
+    // If delta is negative no collision 
+    if (delta < 0.0) {
+        return false;
+    }
+
+    // Calculate the two potential intersection places
+    double sqrt_delta = std::sqrt(delta);
+    double t1 = (-B + sqrt_delta) / (2.0 * A);
+    double t2 = (-B - sqrt_delta) / (2.0 * A);
+
+    // Check if either intersection point lies within the segment bounds [0, 1]
+    if ((t1 >= 0.0 && t1 <= 1.0) || (t2 >= 0.0 && t2 <= 1.0)) return true; 
+
+
+    // Check if segment inside sphere
+    if (C <= 0 && (A + 2.0 * B + C <= 0)) {
+        return true;
+    }
+
+    return false;
+}
 
 
