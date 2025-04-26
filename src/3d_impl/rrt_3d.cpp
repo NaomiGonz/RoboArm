@@ -204,6 +204,53 @@ bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2,
     return true;
 }
 
-bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_cartesian_points){
-	return 0;
+bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_cartesian_points) {
+    // Check first if joint points are inside sphere obstacle
+    for (const auto& point : robot_cartesian_points) {
+        // Check dimension
+        if (point.size() != 3) {
+            std::cout << "WARNING: skipped because incorrect dimensions\n";
+            continue;
+        }
+
+        // For each point check if inside sphere
+        for (const auto& obs : this->obstacles) {
+            double dx = point[0] - obs.x;
+            double dy = point[1] - obs.y;
+            double dz = point[2] - obs.z;
+            double dist_sq = dx * dx + dy * dy + dz * dz;
+            double radius_sq = obs.radius * obs.radius;
+            if (dist_sq < radius_sq) {
+                return true; 
+            }
+        }
+    }
+
+    // Check at least 2 points in the vector
+    if (robot_cartesian_points.size() < 2){
+        std::cout << "WARNING: can't check collsion\n";
+        return false;
+    }
+
+    // Loop through each line segment to check for collision
+    for (size_t i = 0; i < robot_cartesian_points.size() - 1; ++i){
+        const Configuration& p1 = robot_cartesian_points[i];
+        const Configuration& p2 = robot_cartesian_points[i+1];
+
+        // Check dimesnsions
+        if (p1.size() != 3 || p2.size() != 3) {
+            std::cout << "WARNING: skipped because incorrect dimensions\n";
+            continue;
+        }
+
+        // Loop through all obstacles, check intersection 
+        for (const auto& obs : this->obstacles){
+            if (segment_sphere_intersect(p1, p2, obs)) return true;
+        }
+    }
+
+    return false;
 }
+
+
+
