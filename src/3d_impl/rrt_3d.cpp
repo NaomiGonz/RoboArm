@@ -166,8 +166,42 @@ bool RRTStar3D::valid(const Configuration& c) {
     return !collision_detected;
 }
 
-bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2, double step_size){
-	return 0;
+bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2, double step_size /* Context only */) {
+    // Check dimensions
+    if (c1.size() != dof || c2.size() != dof) return false;
+
+    // If points are super close check if endpoint valid and just return that
+    if (allclose(c1, c2)) return valid(c2); 
+
+    // Determine num of steps for checking validity along the path
+    double total_dist = distance(c1, c2);
+    if (total_dist >= std::numeric_limits<double>::infinity()) return false; 
+
+    // Choose max distance in joint space between checks 
+    // TODO: Tune this 
+    double check_resolution = 0.1; 
+    int num_steps = std::max(1, static_cast<int>(std::ceil(total_dist / check_resolution)));
+
+    // Loop along the joint space path, check if valid 
+    Configuration q_interp(dof);
+    for (int i = 1; i <= num_steps; ++i) {
+        // Calculate interpolation factor (fraction of path covered)
+        double t = static_cast<double>(i) / num_steps;
+
+        // Calculate intermediate joint configuration using shortest angle difference 
+        for (int j = 0; j < dof; ++j) {
+            double diff = c2[j] - c1[j];
+            double normalized_diff = std::remainder(diff, 2.0 * M_PI); 
+            q_interp[j] = c1[j] + normalized_diff * t;
+
+        }
+
+        // Check if the intermediate configuration is valid and collison free
+        if (!valid(q_interp)) return false; 
+    }
+
+    // If the loop completes, all intermediate points were valid + collison free
+    return true;
 }
 
 bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_cartesian_points){
