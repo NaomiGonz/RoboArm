@@ -21,7 +21,28 @@ RRTStar3D::RRTStar3D(int seed, const std::vector<SphereObstacle>& _obstacles, co
 }
 
 Configuration RRTStar3D::sample(double p /* p = goal bias probability */){
-	
+	const int max_tries = 25; // avoid infiinte loops
+    std::uniform_real_distribution<double> unit(0.0, 1.0);
+
+    for(int attempt = 0; attempt < max_tries; attempt++){
+        Configuration q(dof);
+
+        // goal biased
+        if(unit(random_generator) < p && !is_goal_reachable()){
+            q = goal_coordinates;
+        } else {
+            for(int ii = 0; ii < dof; ii++){
+                double lo = rad_limits[ii].first;
+                double hi = rad_limits[ii].second;
+
+                std::uniform_real_distribution<double> jdist(lo,hi);
+                q[ii] = jdist(random_generator);
+            }
+        }
+
+        if(valid(q)) return q; // successful 
+    }
+    return Configuration(); // signal failure
 }
 
 // returns negative if error
