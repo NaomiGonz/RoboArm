@@ -10,6 +10,17 @@
 #include <sys/stat.h> 
 #include <fstream>
 #include <iomanip>
+#include <filesystem>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <string>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <cstring>
+
+
+namespace fs = std::filesystem;
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -366,10 +377,57 @@ std::vector<Configuration> RRTStar3D::forward_kinematics(const Configuration& jo
     return robot_points;
 }
 
+// --- Helper function: open serial oprt ---
+int open_serial_port(const char* portname){
+    int serial_fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+    if(serial_fd < 0){
+        std::cerr << "Error opening serial port" << std::endl;
+        return -1;
+    }
+
+    struct termios tty;
+
+    if(tcgetattr(serial_fd, &tty) != 0){
+        std::cerr << "Error getting termios" << std::endl;
+        close(serial_fd);
+        return -1;
+    }
+
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit characters
+    tty.c_iflag &= ~IGNBRK; // disable break processing
+    tty.c_lflag = 0; // no signalling chars, no echo, no canonical prcoessing
+    tty.c_oflag = 0; // no remapping, no delays
+    tty.c_cc[VMIN] = 1; // read blocks
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~(PARENB | PARODD);
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+
+    if(tcsetattr(serial_fd, TCSANOW, &tty) != 0){
+        std::cerr << "Error setting termios" << std::endl;
+        close(serial_fd);
+        return -1;
+    }
+
+    return serial_fd;
+}
 
 // --- Main Application Logic ---
 int main() {
     std::cout << "reached main" << std::endl;
+
+    // --- Serial Setup ---
+    const char* serial_port = "/dev/ttyUSB0"; // update to actual value
+    int serial_fd = open_serial_port(serial_port);
+    if(serial_fd < 0) return 1;
+    usleep(1000000);
 
     // --- Configuration ---
     const Configuration c_init = {0.0, 0.0, 0.0, -1.0, 0.0};
@@ -404,117 +462,35 @@ int main() {
 
     // --- Data Collection ---
     std::cout << "Collecting data for output..." << std::endl;
-    auto all_edges = rrt.get_all_edges();
-    auto goal_path = rrt.get_path_to_goal(); 
-    std::vector<std::pair<Configuration, Configuration>> simplified_path;
-    if (!goal_path.empty()) {
-        simplified_path = rrt.simplify_path(goal_path, step_size);
-    }
-    double final_goal_cost = rrt.get_goal_cost(); // Returns infinity if no path
-
-    // --- Output File Creation ---
-    std::string output_dir = "results";
-    std::string filename;
-
-    // Create results directory if it doesn't exist
-    struct stat st = {0};
-    if (stat(output_dir.c_str(), &st) == -1) {
-        mkdir(output_dir.c_str());
-        std::cout << "Created directory: " << output_dir << std::endl;
-    }
-
-
-    std::cout << "Enter the output filename (e.g., rrt_output.csv): ";
-    std::cin >> filename;
-    std::string full_path = output_dir + "/" + filename;
-
-    std::ofstream outfile(full_path);
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Could not open file " << full_path << " for writing." << std::endl;
+    auto goal_points = rrt.get_points_to_goal(); 
+    if (goal_points.empty()) {
+        std::cerr << "No valid path to goal found." << std::endl;
+        close(serial_fd);
         return 1;
     }
-    std::cout << "Writing data to " << full_path << std::endl;
 
-    // Set precision for floating point numbers in the output file
-    outfile << std::fixed << std::setprecision(6);
+    // --- Send path to robot ---
+    for(const auto& point : goal_points){
+        if(point.size() != 5){
+            std::cerr "Invalid joint config size" << std::endl;
+            continue;
+        }
 
-    // --- Write Data to CSV ---
+        char command[256];
+        snprintf(command,sizeof(command),
+            "{\"T\":102,\"base\":%.6f,\"shoulder\":%.6f,\"elbow\":%.6f,\"wrist\":%.6f,\"roll\":%.6f,\"hand\":%.4f,\"spd\":%d,\"acc\":%d}\n",
+            point[0], point[1], point[2], point[3], point[4],
+            3.13, 1, 10);
+        
+        write(serial_fd, command, strlen(command));
+        std::cout << "sent: " << command << std::endl;
+        tcdrain(serial_fd); // flush output buffer
 
-    // Parameters
-    outfile << "# Section: Parameters" << std::endl;
-    outfile << "Param,Value" << std::endl;
-    outfile << "p," << p << std::endl;
-    outfile << "k," << k << std::endl;
-    outfile << "step_size," << step_size << std::endl;
-    outfile << "num_nodes," << NUM_NODES << std::endl;
-    outfile << "goal_cost,";
-    if (std::isinf(final_goal_cost)) {
-         outfile << "inf" << std::endl;
-    } else {
-         outfile << final_goal_cost << std::endl;
+        usleep(500000); // 500ms delay between points for robot to move
     }
-    outfile << std::endl;
-    
-    // Joint Limits
-    outfile << "# Section: Joint_Limits\njoint,q_min,q_max\n";
-    for (std::size_t j = 0; j < joint_limits.size(); ++j) {
-        outfile << (j + 1)             << ','   
-            << joint_limits[j].first  << ','
-            << joint_limits[j].second << '\n';
-    }
-    outfile << std::endl;
 
-    // Start
-    outfile << "# Section: Start\nq1,q2,q3,q4,q5\n";
-    for (double q : c_init) outfile << q << (q==c_init.back()?'\n':',');
-
-    // Goal
-    for (double q : c_goal) outfile << q << (q==c_goal.back()?'\n':',');
-    outfile << std::endl;
-
-    // Obstacles
-    outfile << "# Section: Obstacles\ncenter_x,center_y,center_z,radius\n";
-    for (auto const& o : obstacles)
-        outfile << o.x << ',' << o.y << ',' << o.z << ',' << o.radius << '\n';
-    outfile << std::endl;
-
-    // All Edges
-    outfile << "# Section: All_Edges\n"
-           "q1_src,q2_src,q3_src,q4_src,q5_src,"
-           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
-    for (auto const& e : all_edges) {
-        for (double q : e.first)  outfile << q << ',';
-        for (size_t i = 0; i < e.second.size(); ++i)
-            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
-    }
-    outfile << std::endl;
-
-    // Goal Path
-    outfile << "# Section: Goal_Path\n"
-           "q1_src,q2_src,q3_src,q4_src,q5_src,"
-           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
-    for (auto const& e : goal_path) {
-        for (double q : e.first)  outfile << q << ',';
-        for (size_t i = 0; i < e.second.size(); ++i)
-            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
-    }
-    outfile << std::endl;
-
-    // Simplified Path
-    outfile << "# Section: Simplified_Path\n"
-           "q1_src,q2_src,q3_src,q4_src,q5_src,"
-           "q1_dst,q2_dst,q3_dst,q4_dst,q5_dst\n";
-    for (auto const& e : simplified_path) {
-        for (double q : e.first)  outfile << q << ',';
-        for (size_t i = 0; i < e.second.size(); ++i)
-            outfile << e.second[i] << (i + 1 == e.second.size() ? '\n' : ',');
-    }
-    outfile << std::endl;
-
-
-    outfile.close();
-    std::cout << "Data successfully written." << std::endl;
-
+    std::cout << "All commands sent" << std::endl;
+    close(serial_fd);
     return 0;
 }
 
