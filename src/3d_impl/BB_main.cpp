@@ -10,6 +10,79 @@
 #include <sys/stat.h> 
 #include <fstream>
 #include <iomanip>
+#include <filesystem>
+#include <unistd.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <string>
+#include <dirent.h>
+#include <cstring>
+#include <cerrno>
+
+
+// --- Helper function: find serial port ---
+std::string find_serial_port(){
+    const char* dir_path = "/dev/";
+    DIR* dir = opendir(dir_path);
+
+    if(!dir){
+        std::cerr << "Error opening /dev/" << std::endl;
+        return "";
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr){
+        if(strncmp(entry->d_name, "ttyUSB", 6) == 0){
+            closedir(dir);
+            return std::string("/dev/") + entry->d_name;
+        }
+    }
+
+    closedir(dir);
+    return "";
+}
+
+// --- Helper function: open serial oprt ---
+int open_serial_port(const char* portname){
+    int serial_fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
+    if(serial_fd < 0){
+        std::cerr << "Error opening serial port" << std::endl;
+        return -1;
+    }
+
+    struct termios tty{};
+
+    if(tcgetattr(serial_fd, &tty) != 0){
+        std::cerr << "Error getting termios" << std::endl;
+        close(serial_fd);
+        return -1;
+    }
+
+    cfsetispeed(&tty, B115200);
+    cfsetospeed(&tty, B115200);
+
+    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit characters
+    tty.c_iflag &= ~IGNBRK; // disable break processing
+    tty.c_lflag = 0; // no signalling chars, no echo, no canonical prcoessing
+    tty.c_oflag = 0; // no remapping, no delays
+    tty.c_cc[VMIN] = 1; // read blocks
+    tty.c_cc[VTIME] = 5; // 0.5 seconds read timeout
+
+    tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+    tty.c_cflag |= (CLOCAL | CREAD);
+    tty.c_cflag &= ~(PARENB | PARODD);
+    tty.c_cflag &= ~CSTOPB;
+    tty.c_cflag &= ~CRTSCTS;
+
+    if(tcsetattr(serial_fd, TCSANOW, &tty) != 0){
+        std::cerr << "Error setting termios" << std::endl;
+        close(serial_fd);
+        return -1;
+    }
+
+    return serial_fd;
+}
 
 // --- Main Application Logic ---
 int main() {
@@ -86,7 +159,7 @@ int main() {
         snprintf(command,sizeof(command),
             "{\"T\":102,\"base\":%.6f,\"shoulder\":%.6f,\"elbow\":%.6f,\"wrist\":%.6f,\"roll\":%.6f,\"hand\":%.4f,\"spd\":%d,\"acc\":%d}\n",
             point[0], point[1], point[2], point[3], point[4],
-            3.13, 1, 10);
+            3.13, 1, 1);
         
         write(serial_fd, command, strlen(command));
         tcdrain(serial_fd); // flush output buffer
