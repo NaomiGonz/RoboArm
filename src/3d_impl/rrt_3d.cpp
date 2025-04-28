@@ -417,7 +417,7 @@ int main() {
 
     // --- Configuration ---
     const Configuration c_init = {0.0, 0.0, 0.0, 0.0, 0.0};
-    const Configuration c_goal = {0.5, 0.5, 1.0, -0.5, 1.0};
+    const Configuration c_goal = {0.5, 1.0, 1.0, -0.5, 1.0};
     const double p = 0.5; // Goal bias probability
     const int k = 20;      // Number of neighbors for RRT*
     const double step_size = 0.1;
@@ -428,8 +428,14 @@ int main() {
 
     std::vector<SphereObstacle> obstacles;
     //obstacles.emplace_back(SphereObstacle{0.073214 , 0.0906615, 0.2217195, 0.0538023});
-    obstacles.emplace_back(SphereObstacle{0.14 , 0.05, 0.4, 0.0538023});
-    obstacles.emplace_back(SphereObstacle{0.24 , 0.05, 0.4, 0.0538023});
+    obstacles.emplace_back(SphereObstacle{0.14 , 0.05, 0.4, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.24 , 0.05, 0.4, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.4, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.3, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.3, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.2, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.3, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.2, 0.05});
 
 
     // Joint angle restrictions in radians
@@ -513,10 +519,18 @@ int main() {
 
     // Start
     outfile << "# Section: Start\nq1,q2,q3,q4,q5\n";
-    for (double q : c_init) outfile << q << (q==c_init.back()?'\n':',');
+    for(int ii; ii < c_init.size() -1; ii++){
+        outfile << c_init[ii] << ",";
+    }
+    outfile << c_init[c_init.size()];
+    outfile << std::endl;
 
     // Goal
-    for (double q : c_goal) outfile << q << (q==c_goal.back()?'\n':',');
+    outfile << "# Section: Goal\nq1,q2,q3,q4,q5\n";
+    for(int ii; ii < c_goal.size() -1; ii++){
+        outfile << c_goal[ii] << ",";
+    }
+    outfile << c_init[c_goal.size()];
     outfile << std::endl;
 
     // Obstacles
