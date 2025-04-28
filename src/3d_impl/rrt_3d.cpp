@@ -17,6 +17,7 @@
 #include <string>
 #include <dirent.h>
 #include <cstring>
+#include <cerrno>
 
 
 namespace fs = std::filesystem;
@@ -488,7 +489,7 @@ int open_serial_port(const char* portname){
     return serial_fd;
 }
 
-// --- Helper: read one line until /n from serial oprt --- 
+// --- Helper: read one line until \n from serial oprt --- 
 std::string read_line_from_serial(int serial_fd){
     std::string result;
     char c;
