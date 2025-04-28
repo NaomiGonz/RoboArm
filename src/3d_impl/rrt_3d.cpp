@@ -592,8 +592,7 @@ int main() {
         std::cout << "sent: " << command << std::endl;
 
         // wait for robot arm confirmation
-        std::string response = read_line_from_serial(serial_fd);
-        std::cout << "received: " << response;
+        sleep(10);
     }
 
     std::cout << "All commands sent" << std::endl;
