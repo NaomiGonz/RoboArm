@@ -480,7 +480,7 @@ int main() {
 
     // --- Configuration ---
     const Configuration c_init = {0.0, 0.0, 0.0, -1.0, 0.0};
-    const Configuration c_goal = {1.0, 1.0, 2.0, -1.0, 2};
+    const Configuration c_goal = {0.5, 1.0, 1.0, -0.5, 1.0};
     const double p = 0.5; // Goal bias probability
     const int k = 20;      // Number of neighbors for RRT*
     const double step_size = 0.1;
