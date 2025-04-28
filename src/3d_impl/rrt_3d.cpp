@@ -171,10 +171,6 @@ bool RRTStar3D::valid(const Configuration& c) {
     }
     bool collision_detected = check_robot_collision(robot_points);
 
-    for(const Configuration& p : robot_points){
-        if(p.size() >= 3 && p[2] < 0.0) return false;
-    }
-
     // Return true if no collision was detected
     return !collision_detected;
 }
@@ -218,6 +214,19 @@ bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2,
 }
 
 bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_cartesian_points) {
+    const double TABLE_MARGIN = -0.05; // allow some margin for table collision
+    const double SELF_COLLISION_RADIUS = 0.01;
+    const int NUM_SPHERES_PER_LINK = 3; // number of spheres along each link
+
+    // --- Table Collision ---
+    if (!robot_cartesian_points.empty()) {
+        const Configuration& end_effector = robot_cartesian_points.back();
+        if (end_effector.size() >= 3 && end_effector[2] < TABLE_MARGIN) {
+            return true; // end-effector dipped below table
+        }
+    }
+    
+    // --- Sphere Collision --- 
     // Check first if joint points are inside sphere obstacle
     for (const auto& point : robot_cartesian_points) {
         // Check dimension
@@ -259,6 +268,41 @@ bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_ca
         // Loop through all obstacles, check intersection 
         for (const auto& obs : this->obstacles){
             if (segment_sphere_intersect(p1, p2, obs)) return true;
+        }
+    }
+
+    // --- Self Collision --- 
+    // models each segment as a series of spheres
+    std::vector<Configuration> spheres;
+
+    for(size_t ii = 0; ii + 1 < robot_cartesian_points.size(); ii++){
+        const Configuration& p1 = robot_cartesian_points[ii];
+        const Configuration& p2 = robot_cartesian_points[ii + 1];
+
+        for(int ss = 0; ss <= NUM_SPHERES_PER_LINK; ss++){
+            double alpha = static_cast<double>(ss) / NUM_SPHERES_PER_LINK;
+            Configuration sphere_center = {
+                (1 - alpha) * p1[0] + alpha * p2[0],
+                (1 - alpha) * p1[1] + alpha * p2[1],
+                (1 - alpha) * p1[2] + alpha * p2[2]
+            };
+            spheres.push_back(sphere_center);
+        }
+    }
+
+    //check collisions between spheres, skip checking adjacent spheres
+    for(size_t ii = 0; ii < spheres.size(); ii++){
+        for(size_t jj = ii + 5; jj < spheres.size(); jj++){
+            double dx = spheres[ii][0] - spheres[jj][0];
+            double dy = spheres[ii][1] - spheres[jj][1];
+            double dz = spheres[ii][2] - spheres[jj][2];
+
+            double dist_sq = dx*dx + dy*dy + dz*dz;
+            double min_allowed_dist = 2 * SELF_COLLISION_RADIUS;
+
+            if(dist_sq < (min_allowed_dist * min_allowed_dist)){
+                return true;
+            }
         }
     }
 
@@ -372,8 +416,8 @@ int main() {
     std::cout << "reached main" << std::endl;
 
     // --- Configuration ---
-    const Configuration c_init = {0.0, 0.0, 0.0, -1.0, 0.0};
-    const Configuration c_goal = {1.0, 1.0, 2.0, -1.0, 2};
+    const Configuration c_init = {0.0, 0.0, 0.0, 0.0, 0.0};
+    const Configuration c_goal = {0.0, 0.5, 0.5, -0.5, 0.5};
     const double p = 0.5; // Goal bias probability
     const int k = 20;      // Number of neighbors for RRT*
     const double step_size = 0.1;
@@ -384,6 +428,8 @@ int main() {
 
     std::vector<SphereObstacle> obstacles;
     obstacles.emplace_back(SphereObstacle{0.073214 , 0.0906615, 0.2217195, 0.05038023});
+    obstacles.emplace_back(SphereObstacle{0.06 , 0.07, 0.1, 0.05038023});
+    obstacles.emplace_back(SphereObstacle{0.04 , 0.1, 0.3, 0.05038023});
 
     // Joint angle restrictions in radians
     std::vector<std::pair<double, double>> joint_limits = { {-2.8973, 2.8973}, {-1.7628, 1.7628}, {-2.8973, 2.8973}, {-3.0718, -0.0698}, {-2.8973, 2.8973} };
