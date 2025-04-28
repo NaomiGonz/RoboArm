@@ -228,6 +228,19 @@ bool RRTStar3D::collision_free(const Configuration& c1, const Configuration& c2,
 }
 
 bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_cartesian_points) {
+    const double TABLE_MARGIN = -0.05; // allow some margin for table collision
+    const double SELF_COLLISION_RADIUS = 0.01;
+    const int NUM_SPHERES_PER_LINK = 3; // number of spheres along each link
+
+    // --- Table Collision ---
+    if (!robot_cartesian_points.empty()) {
+        const Configuration& end_effector = robot_cartesian_points.back();
+        if (end_effector.size() >= 3 && end_effector[2] < TABLE_MARGIN) {
+            return true; // end-effector dipped below table
+        }
+    }
+    
+    // --- Sphere Collision --- 
     // Check first if joint points are inside sphere obstacle
     for (const auto& point : robot_cartesian_points) {
         // Check dimension
@@ -269,6 +282,41 @@ bool RRTStar3D::check_robot_collision(const std::vector<Configuration>& robot_ca
         // Loop through all obstacles, check intersection 
         for (const auto& obs : this->obstacles){
             if (segment_sphere_intersect(p1, p2, obs)) return true;
+        }
+    }
+
+    // --- Self Collision --- 
+    // models each segment as a series of spheres
+    std::vector<Configuration> spheres;
+
+    for(size_t ii = 0; ii + 1 < robot_cartesian_points.size(); ii++){
+        const Configuration& p1 = robot_cartesian_points[ii];
+        const Configuration& p2 = robot_cartesian_points[ii + 1];
+
+        for(int ss = 0; ss <= NUM_SPHERES_PER_LINK; ss++){
+            double alpha = static_cast<double>(ss) / NUM_SPHERES_PER_LINK;
+            Configuration sphere_center = {
+                (1 - alpha) * p1[0] + alpha * p2[0],
+                (1 - alpha) * p1[1] + alpha * p2[1],
+                (1 - alpha) * p1[2] + alpha * p2[2]
+            };
+            spheres.push_back(sphere_center);
+        }
+    }
+
+    //check collisions between spheres, skip checking adjacent spheres
+    for(size_t ii = 0; ii < spheres.size(); ii++){
+        for(size_t jj = ii + 5; jj < spheres.size(); jj++){
+            double dx = spheres[ii][0] - spheres[jj][0];
+            double dy = spheres[ii][1] - spheres[jj][1];
+            double dz = spheres[ii][2] - spheres[jj][2];
+
+            double dist_sq = dx*dx + dy*dy + dz*dz;
+            double min_allowed_dist = 2 * SELF_COLLISION_RADIUS;
+
+            if(dist_sq < (min_allowed_dist * min_allowed_dist)){
+                return true;
+            }
         }
     }
 
