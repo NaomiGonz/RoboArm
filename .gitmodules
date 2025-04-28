@@ -1,0 +1,4 @@
+[submodule "pico_armTest"]
+	path = pico_armTest
+	url = git@github.com:NaomiGonz/pico_armTest.git
+	branch = main
