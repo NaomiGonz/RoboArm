@@ -15,7 +15,6 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <string>
-#include <sys/stat.h>
 #include <dirent.h>
 #include <cstring>
 
@@ -377,6 +376,28 @@ std::vector<Configuration> RRTStar3D::forward_kinematics(const Configuration& jo
     return robot_points;
 }
 
+// --- Helper function: find serial port ---
+std::string find_serial_port(){
+    const char* dir_path = "/dev/";
+    DIR* dir = opendir(dir_path);
+
+    if(!dir){
+        std::cerr << "Error opening /dev/" << std::endl;
+        return "";
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr){
+        if(strncmp(entry->d_name, "ttyUSB", 6) == 0){
+            closedir(dir);
+            return std::string("/dev/") + entry->d_name;
+        }
+    }
+
+    closedir(dir);
+    return "";
+}
+
 // --- Helper function: open serial oprt ---
 int open_serial_port(const char* portname){
     int serial_fd = open(portname, O_RDWR | O_NOCTTY | O_SYNC);
@@ -385,7 +406,7 @@ int open_serial_port(const char* portname){
         return -1;
     }
 
-    struct termios tty;
+    struct termios tty{};
 
     if(tcgetattr(serial_fd, &tty) != 0){
         std::cerr << "Error getting termios" << std::endl;
@@ -419,13 +440,41 @@ int open_serial_port(const char* portname){
     return serial_fd;
 }
 
+// --- Helper: read one line until /n from serial oprt --- 
+std::string read_line_from_serial(int serial_fd){
+    std::string result;
+    char c;
+
+    while(true){
+        ssize_t n = read(serial_fd, &c, 1);
+        if(n > 0){
+            result += c;
+            if(c == '\n') break;
+        } else if (n == 0){
+            break; // end of file
+        } else {
+            std::cerr << "error reading serial" << std::endl;
+            break;
+        }
+    }
+
+    return result;
+}
+
 // --- Main Application Logic ---
 int main() {
     std::cout << "reached main" << std::endl;
 
+    // detect serial port
+    std::string serial_port = find_serial_port();
+    if(serial_port.empty()){
+        std::cerr << "could not find USB device" << std::endl;
+        return 1;
+    }
+    std::cout << "found serial port" << std::endl;
+
     // --- Serial Setup ---
-    const char* serial_port = "/dev/ttyUSB0"; // update to actual value
-    int serial_fd = open_serial_port(serial_port);
+    int serial_fd = open_serial_port(serial_port.c_str());
     if(serial_fd < 0) return 1;
     usleep(1000000);
 
@@ -469,10 +518,10 @@ int main() {
         return 1;
     }
 
-    // --- Send path to robot ---
+    // --- Send path to robot point by point ---
     for(const auto& point : goal_points){
         if(point.size() != 5){
-            std::cerr "Invalid joint config size" << std::endl;
+            std::cerr << "Invalid joint config size" << std::endl;
             continue;
         }
 
@@ -483,10 +532,12 @@ int main() {
             3.13, 1, 10);
         
         write(serial_fd, command, strlen(command));
-        std::cout << "sent: " << command << std::endl;
         tcdrain(serial_fd); // flush output buffer
+        std::cout << "sent: " << command << std::endl;
 
-        usleep(500000); // 500ms delay between points for robot to move
+        // wait for robot arm confirmation
+        std::string response = read_line_from_serial(serial_fd);
+        std::cout << "received: " << response;
     }
 
     std::cout << "All commands sent" << std::endl;
