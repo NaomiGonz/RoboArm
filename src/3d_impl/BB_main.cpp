@@ -58,8 +58,15 @@ int open_serial_port(const char* portname){
         return -1;
     }
 
+    // set baude rate to B115200
     cfsetispeed(&tty, B115200);
     cfsetospeed(&tty, B115200);
+
+    /* mimics what python does: ser = serial.Serial(args.port, baudrate=115200, dsrdtr=None)
+    ser.setRTS(False)
+    ser.setDTR(False) */
+    int mcs = TIOCM_DTR | TIOCM_RTS;
+    ioctl(serial_fd, TIOCMBIC, &mcs);   // clear both modem-control bits
 
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit characters
     tty.c_iflag &= ~IGNBRK; // disable break processing
@@ -70,10 +77,10 @@ int open_serial_port(const char* portname){
 
     tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~(PARENB | PARODD);
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
+    tty.c_cflag |= (CLOCAL | CREAD); // ignore modem control lines, enable receiver
+    tty.c_cflag &= ~(PARENB | PARODD); // no parity bit
+    tty.c_cflag &= ~CSTOPB; // stop bit
+    tty.c_cflag &= ~CRTSCTS; // disables hardware RTS/CTS flow control
 
     if(tcsetattr(serial_fd, TCSANOW, &tty) != 0){
         std::cerr << "Error setting termios" << std::endl;
@@ -141,15 +148,22 @@ int main() {
 
     // --- Data Collection ---
     std::cout << "Collecting data for output..." << std::endl;
-    auto goal_points = rrt.get_points_to_goal(); 
+    auto goal_points = rrt.get_path_to_goal(); 
     if (goal_points.empty()) {
         std::cerr << "No valid path to goal found." << std::endl;
         close(serial_fd);
         return 1;
     }
 
+    // Set up joint positions robot will execute to reach goal
+    std::vector<std::vector <double>> joint_positions;
+    for (int i =0; i < goal_points.size(), i++){
+        joint_positions.push_back(goal_points[i].first);
+    }
+    joint_positions.push_back(goal_points[goal_points.size() - 1].second);
+
     // --- Send path to robot point by point ---
-    for(const auto& point : goal_points){
+    for(const auto& point : joint_positions){
         if(point.size() != 5){
             std::cerr << "Invalid joint config size" << std::endl;
             continue;
