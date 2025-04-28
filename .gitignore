@@ -1,0 +1,62 @@
+# Operating-system junk 
+.DS_Store
+Icon?
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Editor / IDE metadata 
+.vscode/
+.idea/
+*.code-workspace
+*.sw?
+*~
+*.bak
+*.tmp
+
+# Build directories & CMake cache
+/build*/
+**/build*/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+
+# Object files
+*.o
+*.obj
+
+# Static / shared libraries
+*.a
+*.lib
+*.la
+*.so
+*.dylib
+*.dll
+
+# Executables & firmware images
+*.exe
+*.out
+*.elf
+*.bin
+*.hex
+*.uf2
+*.map
+
+# Python code
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+#  Logs, core dumps, misc
+*.log
+*.core
+*.stackdump
+*.dmp
+
+# HDL / simulation scratch
+*.vcd
+*.vvp
+*.lxt*
+*.gtkw
+*.wlf
