@@ -417,7 +417,7 @@ int main() {
 
     // --- Configuration ---
     const Configuration c_init = {0.0, 0.0, 0.0, 0.0, 0.0};
-    const Configuration c_goal = {0.0, 0.5, 0.5, -0.5, 0.5};
+    const Configuration c_goal = {0.5, 0.5, 1.0, -0.5, 1.0};
     const double p = 0.5; // Goal bias probability
     const int k = 20;      // Number of neighbors for RRT*
     const double step_size = 0.1;
@@ -427,9 +427,10 @@ int main() {
     //const double XYZ_MAX = 2.0;
 
     std::vector<SphereObstacle> obstacles;
-    obstacles.emplace_back(SphereObstacle{0.073214 , 0.0906615, 0.2217195, 0.05038023});
-    obstacles.emplace_back(SphereObstacle{0.06 , 0.07, 0.1, 0.05038023});
-    obstacles.emplace_back(SphereObstacle{0.04 , 0.1, 0.3, 0.05038023});
+    //obstacles.emplace_back(SphereObstacle{0.073214 , 0.0906615, 0.2217195, 0.0538023});
+    obstacles.emplace_back(SphereObstacle{0.14 , 0.05, 0.4, 0.0538023});
+    obstacles.emplace_back(SphereObstacle{0.24 , 0.05, 0.4, 0.0538023});
+
 
     // Joint angle restrictions in radians
     std::vector<std::pair<double, double>> joint_limits = { {-2.8973, 2.8973}, {-1.7628, 1.7628}, {-2.8973, 2.8973}, {-3.0718, -0.0698}, {-2.8973, 2.8973} };
