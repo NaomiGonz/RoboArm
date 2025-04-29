@@ -3,13 +3,16 @@
 
 CXX       := g++
 CXX_ARM   := arm-linux-gnueabihf-g++
-CXXFLAGS  := -I.. -std=c++14 -O2 -I./forward_kinematics
+CXXFLAGS  := -I.. -std=c++17 -O2 -I./forward_kinematics
 
 # -----------------------------------------------------
 # Native build (default)
 # -----------------------------------------------------
-rrt_3d: rrt_3d.o rrt_base.o fk.o
-	$(CXX) $(CXXFLAGS) -o rrt_3d rrt_3d.o rrt_base.o fk.o
+rrt_3d: rrt_3d.o rrt_base.o fk.o main.o
+	$(CXX) $(CXXFLAGS) -o rrt_3d rrt_3d.o rrt_base.o fk.o main.o
+
+main.o: main.cpp rrt_3d.h
+	$(CXX) $(CXXFLAGS) -c main.cpp -o main.o
 
 rrt_3d.o: rrt_3d.cpp rrt_3d.h ../rrt_base.hpp
 	$(CXX) $(CXXFLAGS) -c rrt_3d.cpp -o rrt_3d.o
@@ -23,8 +26,11 @@ fk.o: ./forward_kinematics/forward_kinematics.cpp ./forward_kinematics/forward_k
 # -----------------------------------------------------
 # ARM cross‑compile build
 # -----------------------------------------------------
-rrt_3d_ARM: rrt_3d_ARM.o rrt_base_ARM.o
+rrt_3d_ARM: rrt_3d_ARM.o rrt_base_ARM.o main.o
 	$(CXX_ARM) $(CXXFLAGS) -static -o rrt_3d_ARM rrt_3d_ARM.o rrt_base_ARM.o fk_ARM.o 
+
+main_ARM.o: BB_main.cpp rrt_3d.h
+	$(CXX) $(CXXFLAGS) -c BB_main.cpp -o main_ARM.o
 
 rrt_3d_ARM.o: rrt_3d.cpp rrt_3d.h ../rrt_base.hpp
 	$(CXX_ARM) $(CXXFLAGS) -static -c rrt_3d.cpp -o rrt_3d_ARM.o
