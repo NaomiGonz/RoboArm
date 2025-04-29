@@ -1,5 +1,4 @@
 #include "rrt_3d.h" 
-#include "forward_kinematics_roarm_double.h"
 #include <vector>
 #include <cmath>
 #include <random>   
@@ -13,7 +12,6 @@
 #include <filesystem>
 #include <unistd.h>
 #include <fcntl.h>
-#include <termios.h>
 #include <string>
 #include <dirent.h>
 #include <cstring>
@@ -24,7 +22,7 @@ int main() {
     std::cout << "reached main" << std::endl;
 
     // --- Configuration ---
-    const Configuration c_init = {0.0, 0.0, 0.0, -1.0, 0.0};
+    const Configuration c_init = {-1.5, 1.0, 1.0, -0.5, 1.0};
     const Configuration c_goal = {0.5, 1.0, 1.0, -0.5, 1.0};
     const double p = 0.5; // Goal bias probability
     const int k = 20;      // Number of neighbors for RRT*
@@ -35,14 +33,14 @@ int main() {
     //const double XYZ_MAX = 2.0;
 
     std::vector<SphereObstacle> obstacles;
-    obstacles.emplace_back(SphereObstacle{0.14 , 0.05, 0.4, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.24 , 0.05, 0.4, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.4, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.3, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.3, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.2, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.3, 0.05});
-    obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.2, 0.05});
+    obstacles.emplace_back(SphereObstacle{0.30, -0.17, 0.09, 0.20});
+    //obstacles.emplace_back(SphereObstacle{0.24 , 0.05, 0.4, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.4, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.14 , 0.0025, 0.3, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.3, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.0 , 0.05, 0.2, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.3, 0.05});
+    //obstacles.emplace_back(SphereObstacle{0.1 , 0.04, 0.2, 0.05});
 
     // Joint angle restrictions in radians
     std::vector<std::pair<double, double>> joint_limits = { {-2.8973, 2.8973}, {-1.7628, 1.7628}, {-2.8973, 2.8973}, {-3.0718, -0.0698}, {-2.8973, 2.8973} };
@@ -87,11 +85,8 @@ int main() {
 
         char command[256];
         snprintf(command, sizeof(command),
-            "{\"T\":102,\"base\":%.6f,\"shoulder\":%.6f,\"elbow\":%.6f,\"wrist\":%.6f,\"roll\":%.6f,\"hand\":%.4f,\"spd\":%d,\"acc\":%d}",
-            point[0], point[1], point[2], point[3], point[4],
-            3.13, // Default hand/gripper value
-            1,      // Default speed
-            1);    // Default acceleration
+            "%.6f,%.6f,%.6f,%.6f,%.6f",
+            point[0], point[1], point[2], point[3], point[4]);    // Default acceleration
         
         outfile << command << std::endl;
     }
