@@ -561,34 +561,43 @@ int main() {
 
     // --- Data Collection ---
     std::cout << "Collecting data for output..." << std::endl;
-    auto goal_points = rrt.get_points_to_goal(); 
+    auto goal_points = rrt.get_path_to_goal(); 
     if (goal_points.empty()) {
         std::cerr << "No valid path to goal found." << std::endl;
         //close(serial_fd);
         return 1;
     }
 
+    // Set up joint positions robot will execute to reach goal
+    std::vector<std::vector <double>> joint_positions;
+    for (int i =0; i < goal_points.size(); i++){
+        joint_positions.push_back(goal_points[i].first);
+    }
+    joint_positions.push_back(goal_points[goal_points.size() - 1].second);
+
     std::ofstream outfile("output.txt");
     // --- Send path to outfile ---
-    for(const auto& point : goal_points){
+    for(const auto& point : joint_positions){
         if(point.size() != 5){
             std::cerr << "Invalid joint config size" << std::endl;
             continue;
         }
 
         char command[256];
-        snprintf(command,sizeof(command),
-            "{\"T\":102,\"base\":%.6f,\"shoulder\":%.6f,\"elbow\":%.6f,\"wrist\":%.6f,\"roll\":%.6f,\"hand\":%.4f,\"spd\":%d,\"acc\":%d}\n",
+        snprintf(command, sizeof(command),
+            "{\"T\":102,\"base\":%.6f,\"shoulder\":%.6f,\"elbow\":%.6f,\"wrist\":%.6f,\"roll\":%.6f,\"hand\":%.4f,\"spd\":%d,\"acc\":%d}",
             point[0], point[1], point[2], point[3], point[4],
-            3.13, 1, 10);
+            3.13, // Default hand/gripper value
+            1,      // Default speed
+            1);    // Default acceleration
         
-        outfile << command;
+        outfile << command << std::endl;
     }
 
     std::cout << "All commands sent" << std::endl;
     outfile.close();
     sleep(5);
-    //system("python process_commands.py")
+    system("python process_commands.py /dev/ttyUSB0");
     return 0;
 }
 
