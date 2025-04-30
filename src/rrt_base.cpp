@@ -374,17 +374,17 @@ GoalBiasedGreedySteerKNeighborhoodRRTStarBase::look_for_goal(Node* node) {
     return std::vector<std::pair<Configuration, Configuration>>();
 }
 
-std::vector<Configuration> get_points_to_goal(){
-    std::vector<std::pair<Configuration, Configuration>> path = get_path_to_goal();
-    std::vector<Configuration> result;
+// std::vector<Configuration> get_points_to_goal(){
+//     std::vector<std::pair<Configuration, Configuration>> path = get_path_to_goal();
+//     std::vector<Configuration> result;
 
-    // Loop through and only append first config
-    for (int i = 0; i < path.size(); ++i){
-        result.push_back(path[i].first);
-    }
+//     // Loop through and only append first config
+//     for (int i = 0; i < path.size(); ++i){
+//         result.push_back(path[i].first);
+//     }
 
-    return result;
-}
+//     return result;
+// }
 
 std::vector<std::pair<Configuration, Configuration>> 
 GoalBiasedGreedySteerKNeighborhoodRRTStarBase::get_all_edges(){
