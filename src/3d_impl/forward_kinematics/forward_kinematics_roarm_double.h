@@ -1,3 +1,6 @@
+#ifndef FORWARD_KINEMATICS_ROARM_DOUBLE_H 
+#define FORWARD_KINEMATICS_ROARM_DOUBLE_H
+
 #include <math.h>
 //#include "inverse_kinematics_config.h"
 
@@ -14,7 +17,7 @@ typedef struct SE3s {
 } SE3s;
 
 /* @pre: ((qsin_0_0 > -1.0) && (qsin_0_0 < 1.0) && (qsin_1_0 > -1.0) && (qsin_1_0 < 1.0) && (qsin_2_0 > -1.0) && (qsin_2_0 < 1.0) && (qsin_3_0 > -1.0) && (qsin_3_0 < -0.06973600721660397) && (qsin_4_0 > -1.0) && (qsin_4_0 < 1.0) && (qcos_0_0 > -0.970308653605208) && (qcos_0_0 < 1.0) && (qcos_1_0 > -0.19082613012676472) && (qcos_1_0 < 1.0) && (qcos_2_0 > -0.970308653605208) && (qcos_2_0 < 1.0) && (qcos_3_0 > -0.9975654812078683) && (qcos_3_0 < 0.9975649688716339) && (qcos_4_0 > -0.970308653605208) && (qcos_4_0 < 1.0) && (v_0_0 > -0.5) && (v_0_0 < 0.5) && (v_1_0 > -0.5) && (v_1_0 < 0.5) && (v_2_0 > -0.5) && (v_2_0 < 0.5) && (v_3_0 > -0.5) && (v_3_0 < 0.5) && (v_4_0 > -0.5) && (v_4_0 < 0.5) && (a_0_0 > -1.0) && (a_0_0 < 1.0) && (a_1_0 > -1.0) && (a_1_0 < 1.0) && (a_2_0 > -1.0) && (a_2_0 < 1.0) && (a_3_0 > -1.0) && (a_3_0 < 1.0) && (a_4_0 > -1.0) && (a_4_0 < 1.0)) */
-SE3s ForwardKinematics(
+inline SE3s ForwardKinematics(
     double qcos_0_0, double qcos_1_0, double qcos_2_0, double qcos_3_0, double qcos_4_0, 
     double qsin_0_0, double qsin_1_0, double qsin_2_0, double qsin_3_0, double qsin_4_0,
     double v_0_0, double v_1_0, double v_2_0, double v_3_0, double v_4_0,
@@ -1628,3 +1631,4 @@ SE3s ForwardKinematics(
     return res;
 } // [-7.991479184227539, 7.991479184227539] +/- 1.2979473667550931e-14
 
+#endif
