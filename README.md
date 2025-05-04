@@ -2,8 +2,10 @@
 
 A full‑stack **motion‑planning and control platform** for the **RoboArmM3**.
 The core algorithm is a C++ implementation of **Rapidly‑exploring Random Trees Star (RRT*)**.
-\*️⃣  **Primary deployment target:** ***BeagleBone Black*** (ARM Cortex‑A8) running Debian 11.
-\*️⃣  **Backup demo:** Raspberry Pi Pico W submodule for quick wireless tests.
+
+*️⃣  **Primary deployment target:** ***BeagleBone Black*** (ARM Cortex‑A8) running Debian 11.
+
+*️⃣  **Backup demo:** Raspberry Pi Pico W submodule for quick wireless tests.
 
 ---
 
