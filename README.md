@@ -5,6 +5,7 @@ The core algorithm is a C++ implementation of **Rapidly‑exploring Random Tree 
 
 *️⃣  **Primary deployment target:** ***BeagleBone Black*** (ARM Cortex‑A8) running Debian 11.
 *️⃣  **Backup demo:** Raspberry Pi Pico W submodule build of the same planner (wireless HTTP client)
+
 ---
 
 ## ✨ Key Features
